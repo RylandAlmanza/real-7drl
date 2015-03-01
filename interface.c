@@ -1,6 +1,8 @@
 #include <string.h>
 #include "interface.h"
 
+#define draw_offset 1
+
 int get_color_pair(int fg, int bg) {
     return fg + (bg * 8) + 1;
 }
@@ -25,11 +27,11 @@ void interface_init() {
     initialize_all_color_pairs();
 }
 
-void interface_draw(int x, int y, char chr, int fg, int bg) {
+void interface_draw(int x, int y, char chr, int fg, int bg, int attrs) {
     int attribute = COLOR_PAIR(get_color_pair(fg, bg));
-    attron(attribute);
-    mvaddch(y, x, chr);
-    attroff(attribute);
+    attron(attrs | attribute);
+    mvaddch(y + draw_offset, x + draw_offset, chr);
+    attroff(attrs | attribute);
 }
 
 void interface_write(int x, int y, char string[]) {

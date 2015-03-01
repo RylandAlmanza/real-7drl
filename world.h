@@ -8,10 +8,11 @@
 typedef struct WorldStruct World;
 
 struct WorldStruct {
-    int count;
     int mask[MAX_ENTITIES];
     Position position[MAX_ENTITIES];
     Appearance appearance[MAX_ENTITIES];
+    void (*action[MAX_ENTITIES])(World *world, int self);
+    void (*reaction[MAX_ENTITIES])(World *world, int self, int actor);
 };
 
 int create_entity(World *world);

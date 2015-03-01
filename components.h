@@ -7,6 +7,9 @@ enum ComponentEnum {
     COMPONENT_NONE = 0,
     COMPONENT_POSITION = 1 << 0,
     COMPONENT_APPEARANCE = 1 << 1,
+    COMPONENT_ACTION = 1 << 2,
+    COMPONENT_REACTION = 1 << 4,
+    COMPONENT_SOLID = 1 << 8
 };
 
 typedef struct PositionStruct Position;
@@ -22,6 +25,7 @@ struct AppearanceStruct {
     char chr;
     int fg;
     int bg;
+    int attrs;
 };
 
 #endif
