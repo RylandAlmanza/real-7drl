@@ -1,55 +1,15 @@
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 #include "world.h"
 #include "interface.h"
-
-int player;
-int key_pressed;
-
-void player_action(World *world, int self) {
-    Position new_pos = world->position[player];
-    int can_move = true;
-    if (key_pressed == 'k') {
-        new_pos.y--;
-    }
-    if (key_pressed == 'l') {
-        new_pos.x++;
-    }
-    if (key_pressed == 'j') {
-        new_pos.y++;
-    }
-    if (key_pressed == 'h') {
-        new_pos.x--;
-    }
-
-    if (new_pos.x < 0 || new_pos.x >= 27 ||
-        new_pos.y < 0 || new_pos.y >= 12) {
-        can_move = false;
-    }
-
-    int tile = (new_pos.y * 27) + new_pos.x;
-    if ((world->mask[tile] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-        can_move = false;
-    }
-
-    for (int i = (27 * 12); i < MAX_ENTITIES; i++) {
-        if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-            can_move = false;
-        }
-    }
-
-    if (can_move) {
-        world->position[player] = new_pos;
-    }
-}
-
-void flower_reaction(World *world, int self) {
-    world->appearance[self].chr = '.';
-}
+#include "globals.h"
+#include "actions.h"
+#include "reactions.h"
 
 int create_player (int x, int y, World *world) {
     int player = create_entity(world);
-    world->mask[player] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_ACTION;
+    world->mask[player] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_ACTION | COMPONENT_TYPE;
     world->position[player] = (Position) {.x = x, .y = y};
     world->appearance[player] = (Appearance) {
         .chr = '@',
@@ -58,6 +18,7 @@ int create_player (int x, int y, World *world) {
         .attrs = 0
     };
     world->action[player] = &player_action;
+    world->type[player] = PLAYER;
     return player;
 }
 
@@ -76,6 +37,7 @@ int create_grass (int x, int y, World *world) {
         .bg = BLACK,
         .attrs = 0
     };
+    world->type[tile] = GRASS;
     return tile;
 }
 
@@ -94,6 +56,7 @@ int create_tree (int x, int y, World *world) {
         .bg = BLACK,
         .attrs = 0
     };
+    world->type[tile] = TREE;
     return tile;
 }
 
@@ -112,6 +75,7 @@ int create_water (int x, int y, World *world) {
         .bg = BLACK,
         .attrs = 0
     };
+    world->type[tile] = WATER;
     return tile;
 }
 
@@ -130,6 +94,8 @@ int create_flower (int x, int y, World *world) {
         .bg = BLACK,
         .attrs = 0
     };
+    world->type[tile] = FLOWER;
+    world->reaction[tile] = &flower_reaction;
     return tile;
 }
 

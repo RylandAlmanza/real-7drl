@@ -9,10 +9,11 @@ typedef struct WorldStruct World;
 
 struct WorldStruct {
     int mask[MAX_ENTITIES];
+    EntityType type[MAX_ENTITIES];
     Position position[MAX_ENTITIES];
     Appearance appearance[MAX_ENTITIES];
     void (*action[MAX_ENTITIES])(World *world, int self);
-    void (*reaction[MAX_ENTITIES])(World *world, int self, int actor);
+    void (*reaction[MAX_ENTITIES])(World *world, int self, int actor, Action action);
 };
 
 int create_entity(World *world);

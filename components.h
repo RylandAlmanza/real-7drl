@@ -9,7 +9,8 @@ enum ComponentEnum {
     COMPONENT_APPEARANCE = 1 << 1,
     COMPONENT_ACTION = 1 << 2,
     COMPONENT_REACTION = 1 << 4,
-    COMPONENT_SOLID = 1 << 8
+    COMPONENT_SOLID = 1 << 8,
+    COMPONENT_TYPE = 1 << 16,
 };
 
 typedef struct PositionStruct Position;
@@ -26,6 +27,24 @@ struct AppearanceStruct {
     int fg;
     int bg;
     int attrs;
+};
+
+typedef enum ActionEnum Action;
+
+enum ActionEnum {
+    ATTACK,
+    STEP_ON
+};
+
+typedef enum EntityTypeEnum EntityType;
+
+enum EntityTypeEnum {
+    PLAYER,
+    GRASS,
+    TREE,
+    FLOWER,
+    WATER,
+    FLOWER_CRUSHED
 };
 
 #endif
