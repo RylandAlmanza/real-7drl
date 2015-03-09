@@ -26,31 +26,32 @@ void player_action(World *world, int self) {
 
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (i == self) continue;
-        if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-            int bx = world->position[i].x;
-            int by = world->position[i].y;
-            if (bx == new_pos.x && by == new_pos.y) {
+        int bx = world->position[i].x;
+        int by = world->position[i].y;
+        if (bx == new_pos.x && by == new_pos.y) {
+            if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
                 can_move = false;
+            }
+            if ((world->mask[i] & COMPONENT_REACTION) == COMPONENT_REACTION) {
                 if (world->type[i] == VILLAGER) {
                     world->reaction[i](world, i, player, GREET);
+                }
+                if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
+                    can_move = false;
+                }
+                if (world->type[i] == FLOWER) {
+                    world->reaction[i](world, i, player, STEP_ON);
+                }
+                if (world->type[i] == WATER) {
+                    world->reaction[i](world, i, player, STEP_ON);
+                }
+                if (world->type[i] == TREE) {
+                    world->reaction[i](world, i, player, BUMP);
                 }
             }
         }
     }
 
-    /*int tile = (new_pos.y * world_width) + new_pos.x;
-    if ((world->mask[tile] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-        can_move = false;
-    }
-    if (world->type[tile] == FLOWER) {
-        world->reaction[tile](world, tile, player, STEP_ON);
-    }
-    if (world->type[tile] == WATER) {
-        world->reaction[tile](world, tile, player, STEP_ON);
-    }
-    if (world->type[tile] == TREE) {
-        world->reaction[tile](world, tile, player, BUMP);
-    }*/
     if (can_move) {
         world->position[player] = new_pos;
     }
