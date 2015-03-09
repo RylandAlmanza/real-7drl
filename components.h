@@ -33,7 +33,9 @@ typedef enum ActionEnum Action;
 
 enum ActionEnum {
     ATTACK,
-    STEP_ON
+    STEP_ON,
+    BUMP,
+    GREET
 };
 
 typedef enum EntityTypeEnum EntityType;
@@ -44,7 +46,11 @@ enum EntityTypeEnum {
     TREE,
     FLOWER,
     WATER,
-    FLOWER_CRUSHED
+    FLOWER_CRUSHED,
+    WALL,
+    PATH,
+    DOOR,
+    VILLAGER
 };
 
 #endif

@@ -38,7 +38,7 @@ void interface_write(int x, int y, char string[]) {
     int attribute = COLOR_PAIR(get_color_pair(WHITE, BLACK));
     attron(attribute);
     for (int i = 0; i < strlen(string); i++) {
-    mvaddch(y, x + i, string[i]);
+        mvaddch(y, x + i, string[i]);
     }
     attroff(attribute);
 }

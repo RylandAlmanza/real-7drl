@@ -4,5 +4,6 @@
 #include "world.h"
 
 void player_action(World *world, int self);
+void villager_action(World *world, int self);
 
 #endif
