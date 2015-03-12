@@ -47,10 +47,11 @@ enum EntityTypeEnum {
     FLOWER,
     WATER,
     FLOWER_CRUSHED,
-    WALL,
-    PATH,
+    FLOOR,
     DOOR,
-    VILLAGER
+    VILLAGER,
+    WOOD_WALL,
+    STONE_WALL
 };
 
 #endif

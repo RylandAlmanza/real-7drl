@@ -15,3 +15,8 @@ int create_entity(World *world) {
 void destroy_entity(World *world, int entity) {
     world->mask[entity] = COMPONENT_NONE;
 }
+
+void recreate_world(World *world) {
+    World new_world;
+    *world = new_world;
+}

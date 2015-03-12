@@ -16,6 +16,7 @@ struct WorldStruct {
     void (*reaction[MAX_ENTITIES])(World *world, int self, int actor, Action action);
 };
 
+void recreate_world(World *world);
 int create_entity(World *world);
 void destroy_entity(World *world, int entity);
 

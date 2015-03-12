@@ -1,13 +1,97 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include "beings.h"
 #include "levelgen.h"
 #include "reactions.h"
 #include "interface.h"
 #include "actions.h"
 #include "globals.h"
 #include "utilities.h"
+#include "tiles.h"
 
-#define area_width 27
-#define area_height 12
+typedef struct EntitySaveStruct EntitySave;
+
+struct EntitySaveStruct {
+    int x;
+    int y;
+    EntityType type;
+};
+
+void save_area (World *world) {
+    int i, x, y;
+    FILE *area_file;
+    FILE *entity_file;
+    FILE *count_file;
+    char filename[255];
+    sprintf(filename, "world/%d-%d.area", area_x, area_y);
+    area_file = fopen(filename, "wb");
+    for (y = 0; y < area_height; y++) {
+        for (x = 0; x < area_width; x++) {
+            fwrite(&world->type[y * area_width + x], sizeof(EntityType), 1, area_file);
+        }
+    }
+
+    fclose(area_file);
+    sprintf(filename, "world/%d-%d.ents", area_x, area_y);
+    entity_file = fopen(filename, "wb");
+
+    EntitySave entity_save;
+    int entity_count = 0;
+    for (i = area_width * area_height; i < MAX_ENTITIES; i++) {
+        if (world->mask[i] != COMPONENT_NONE) {
+            entity_save = (EntitySave) {
+                .x = world->position[i].x,
+                .y = world->position[i].y,
+                .type = world->type[i]
+            };
+            fwrite(&entity_save, sizeof(EntitySave), 1, entity_file);
+            entity_count++;
+        }
+    }
+
+    fclose(entity_file);
+    sprintf(filename, "world/%d-%d.coun", area_x, area_y);
+    count_file = fopen(filename, "wb");
+
+    fwrite(&entity_count, sizeof(int), 1, count_file);
+
+    fclose(count_file);
+}
+
+void load_area(World *world) {
+    int i, x, y;
+    FILE *area_file;
+    FILE *entity_file;
+    FILE *count_file;
+    char filename[255];
+    sprintf(filename, "world/%d-%d.area", area_x, area_y);
+    area_file = fopen(filename, "rb");
+    EntityType entity_type;
+    for (y = 0; y < area_height; y++) {
+        for (x = 0; x < area_width; x++) {
+            fread(&entity_type, sizeof(EntityType), 1, area_file);
+            create_tile(x, y, entity_type, world);
+        }
+    }
+
+    fclose(area_file);
+    sprintf(filename, "world/%d-%d.coun", area_x, area_y);
+    count_file = fopen(filename, "rb");
+    int entity_count;
+    fread(&entity_count, sizeof(int), 1, count_file);
+    fclose(count_file);
+
+    sprintf(filename, "world/%d-%d.ents", area_x, area_y);
+    entity_file = fopen(filename, "rb");
+
+    EntitySave entity_save;
+    for (i = 0; i < entity_count; i++) {
+        fread(&entity_save, sizeof(EntitySave), 1, entity_file);
+        int being = create_being(entity_save.x, entity_save.y, entity_save.type, world);
+        if (entity_save.type == PLAYER) player = being;
+    }
+    fclose(entity_file);
+}
 
 int random_empty_tile(World *world) {
     while (true) {
@@ -20,223 +104,25 @@ int random_empty_tile(World *world) {
     }
 }
 
-int create_player (int x, int y, World *world) {
-    int player = create_entity(world);
-    world->mask[player] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_ACTION | COMPONENT_TYPE | COMPONENT_SOLID;
-    world->position[player] = (Position) {.x = x,
-                                          .y = y};
-    world->appearance[player] = (Appearance) {
-        .chr = '@',
-        .fg = WHITE,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->action[player] = &player_action;
-    world->type[player] = PLAYER;
-    return player;
-}
-
-int create_villager(int x, int y, World *world) {
-    int tile;
-    int villager = create_entity(world);
-    world->mask[villager] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_ACTION |
-                            COMPONENT_TYPE | COMPONENT_SOLID | COMPONENT_REACTION;
-    world->position[villager] = (Position) {.x = x,
-                                            .y = y};
-    world->appearance[villager] = (Appearance) {
-        .chr = '@',
-        .fg = YELLOW,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->action[villager] = &villager_action;
-    world->reaction[villager] = &villager_reaction;
-    world->type[villager] = VILLAGER;
-    return villager;
-}
-
-int create_grass (int x, int y, World *world) {
-    int tile;
-    if (world->mask[y * area_width + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = y * area_width + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = '.',
-        .fg = GREEN,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->type[tile] = GRASS;
-    return tile;
-}
-
-int create_tree (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_SOLID | COMPONENT_REACTION;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = 'T',
-        .fg = GREEN,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->type[tile] = TREE;
-    world->reaction[tile] = &tree_reaction;
-    return tile;
-}
-
-int create_water (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_REACTION;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = '~',
-        .fg = BLUE,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->type[tile] = WATER;
-    world->reaction[tile] = &water_reaction;
-    return tile;
-}
-
-int create_flower (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_REACTION;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = '*',
-        .fg = YELLOW,
-        .bg = BLACK,
-        .attrs = 0
-    };
-    world->type[tile] = FLOWER;
-    world->reaction[tile] = &flower_reaction;
-    return tile;
-}
-
-int create_wood_wall (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_SOLID;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = ' ',
-        .fg = YELLOW,
-        .bg = BLACK,
-        .attrs = A_DIM | A_REVERSE
-    };
-    world->type[tile] = WALL;
-    return tile;
-}
-
-int create_stone_wall (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE | COMPONENT_SOLID;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = ' ',
-        .fg = BLACK,
-        .bg = BLACK,
-        .attrs = A_BOLD | A_REVERSE
-    };
-    world->type[tile] = WALL;
-    return tile;
-}
-
-int create_floor (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = '.',
-        .fg = YELLOW,
-        .bg = BLACK,
-        .attrs = A_DIM
-    };
-    world->type[tile] = PATH;
-    return tile;
-}
-
-int create_door (int x, int y, World *world) {
-    int tile;
-    if (world->mask[(y * area_width) + x] == COMPONENT_NONE) {
-        tile = create_entity(world);
-    } else {
-        tile = (y * area_width) + x;
-    }
-    world->mask[tile] = COMPONENT_POSITION | COMPONENT_APPEARANCE;
-    world->position[tile] = (Position) {.x = x,
-                                        .y = y};
-    world->appearance[tile] = (Appearance) {
-        .chr = '+',
-        .fg = YELLOW,
-        .bg = BLACK,
-        .attrs = A_DIM
-    };
-    world->type[tile] = DOOR;
-    return tile;
-}
-
 void generate_nature (World *world) {
     int y = 0;
     int x = 0;
     for (y = 0; y < area_height; y++) {
         for (x = 0; x < area_width; x++) {
-            create_grass(x, y, world);
+            create_tile(x, y, GRASS, world);
         }
     }
     for (y = 0; y < area_height; y++) {
         for (x = 0; x < area_width; x++) {
             if (rand() % 15 == 0) {
-                create_tree(x, y, world);
+                create_tile(x, y, TREE, world);
             }
         }
     }
     for (y = 0; y < area_height; y++) {
         for (x = 0; x < area_width; x++) {
             if (rand() % 20 == 0) {
-                create_flower(x, y, world);
+                create_tile(x, y, FLOWER, world);
             }
         }
     }
@@ -246,7 +132,7 @@ void generate_nature (World *world) {
                 for (int j = 0; j < 3; j++) {
                     for (int i = 0; i < 3; i++) {
                         if (rand() % 2 == 0) {
-                            create_water(x + i, y + j, world);
+                            create_tile(x + i, y + j, WATER, world);
                         }
                     }
                 }
@@ -269,10 +155,10 @@ void create_building(int x, int y, World *world) {
         for (int i = 0; i < building_width; i++) {
             char chr = building_ascii[j * building_width + i];
             if (chr == '.') {
-                create_floor(x + i, y + j, world);
+                create_tile(x + i, y + j, FLOOR, world);
             }
             if (chr == '#') {
-                create_wood_wall(x + i, y + j, world);
+                create_tile(x + i, y + j, WOOD_WALL, world);
             }
         }
     }
@@ -283,7 +169,7 @@ void create_building(int x, int y, World *world) {
         door_y = 1 + (rand() % 2);
         door_x = (rand() % 2) == 0 ? 0 : 4;
     }
-    create_door(x + door_x, y + door_y, world);
+    create_tile(x + door_x, y + door_y, DOOR, world);
 }
 
 void create_fountain(int x, int y, World *world) {
@@ -296,10 +182,10 @@ void create_fountain(int x, int y, World *world) {
         for (int i = 0; i < fountain_width; i++) {
             char chr = fountain_ascii[j * fountain_width + i];
             if (chr == '#') {
-                create_stone_wall(x + i, y + j, world);
+                create_tile(x + i, y + j, STONE_WALL, world);
             }
             if (chr == '~') {
-                create_water(x + i, y + j, world);
+                create_tile(x + i, y + j, WATER, world);
             }
         }
     }
@@ -312,7 +198,7 @@ void generate_village(World *world) {
     int building_count = 0;
     for (y = 0; y < area_height; y++) {
         for (x = 0; x < area_width; x++) {
-            create_grass(x, y, world);
+            create_tile(x, y, GRASS, world);
         }
     }
     for (y = 0; y < 2; y++) {
@@ -333,6 +219,6 @@ void generate_village(World *world) {
     }
     for (int i = 0; i < building_count; i++) {
         int tile = random_empty_tile(world);
-        create_villager(world->position[tile].x, world->position[tile].y, world);
+        create_being(world->position[tile].x, world->position[tile].y, VILLAGER, world);
     }
 }

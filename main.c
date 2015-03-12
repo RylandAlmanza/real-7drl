@@ -1,7 +1,11 @@
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "world.h"
+#include "beings.h"
 #include "interface.h"
 #include "globals.h"
 #include "actions.h"
@@ -36,18 +40,35 @@ void draw_border() {
     }
 }
 
+void get_area(World *world) {
+    recreate_world(world);
+    char filename[255];
+    sprintf(filename, "world/%d-%d.area", area_x, area_y);
+    if (access(filename, F_OK) != -1) {
+        load_area(world);
+    } else {
+        rand() % 2 == 0 ? generate_village(world) : generate_nature(world);
+        player = create_being(0, 0, PLAYER, world);
+    }
+}
+
+
 int main() {
     srand(time(NULL));
-    interface_init();
     World world;
     area_x = 0;
     area_y = 0;
     area_width = 27;
     area_height = 12;
-    world_width = area_width * 2;
-    world_height = area_height * 2;
-    rand() % 2 == 0 ? generate_village(&world) : generate_nature(&world);
-    player = create_player(0, 0, &world);
+    interface_init();
+
+    struct stat st = {0};
+    if (stat("world", &st) == -1) {
+        mkdir("world", 0700);
+    }
+
+    get_area(&world);
+
     while (key_pressed != 'q') {
         draw_border();
         draw_world(&world);
@@ -56,14 +77,49 @@ int main() {
         key_pressed = getch();
         interface_wipe();
         world.action[player](&world, player);
+        Position ppos = world.position[player];
+        if (ppos.x < 0) {
+            save_area(&world);
+            area_x--;
+            get_area(&world);
+            world.position[player].x = 26;
+            world.position[player].y = ppos.y;
+        }
+        if (ppos.y < 0) {
+            save_area(&world);
+            area_y--;
+            get_area(&world);
+            world.position[player].x = ppos.x;
+            world.position[player].y = 11;
+        }
+
+        if (ppos.x > 26) {
+            save_area(&world);
+            area_x++;
+            get_area(&world);
+            world.position[player].x = 0;
+            world.position[player].y = ppos.y;
+        }
+
+        if (ppos.y > 11) {
+            save_area(&world);
+            area_y++;
+            get_area(&world);
+            world.position[player].x = ppos.x;
+            world.position[player].y = 0;
+        }
+        
         for (int i = 0; i < MAX_ENTITIES; i++) {
-            if ((world.mask[i] & COMPONENT_ACTION) == COMPONENT_ACTION) {
-                if (i != player) {
-                    world.action[i](&world, i);
+            if (world.mask[i] != COMPONENT_NONE) {
+                if ((world.mask[i] & COMPONENT_ACTION) == COMPONENT_ACTION) {
+                    if (i != player && world.type[i] != PLAYER) {
+                        world.action[i](&world, i);
+                    }
                 }
             }
         }
     }
     interface_uninit();
+    save_area(&world);
     return 0;
 }

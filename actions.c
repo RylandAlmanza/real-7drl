@@ -19,34 +19,36 @@ void player_action(World *world, int self) {
         new_pos.x--;
     }
 
-    if (new_pos.x < 0 || new_pos.x >= 27 ||
+    /*if (new_pos.x < 0 || new_pos.x >= 27 ||
         new_pos.y < 0 || new_pos.y >= 12) {
         can_move = false;
-    }
+    }*/
 
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (i == self) continue;
-        int bx = world->position[i].x;
-        int by = world->position[i].y;
-        if (bx == new_pos.x && by == new_pos.y) {
-            if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-                can_move = false;
-            }
-            if ((world->mask[i] & COMPONENT_REACTION) == COMPONENT_REACTION) {
-                if (world->type[i] == VILLAGER) {
-                    world->reaction[i](world, i, player, GREET);
-                }
+        if (world->mask[i] != COMPONENT_NONE) {
+            int bx = world->position[i].x;
+            int by = world->position[i].y;
+            if (bx == new_pos.x && by == new_pos.y) {
                 if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
                     can_move = false;
                 }
-                if (world->type[i] == FLOWER) {
-                    world->reaction[i](world, i, player, STEP_ON);
-                }
-                if (world->type[i] == WATER) {
-                    world->reaction[i](world, i, player, STEP_ON);
-                }
-                if (world->type[i] == TREE) {
-                    world->reaction[i](world, i, player, BUMP);
+                if ((world->mask[i] & COMPONENT_REACTION) == COMPONENT_REACTION) {
+                    if (world->type[i] == VILLAGER) {
+                        world->reaction[i](world, i, player, GREET);
+                    }
+                    if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
+                        can_move = false;
+                    }
+                    if (world->type[i] == FLOWER) {
+                        world->reaction[i](world, i, player, STEP_ON);
+                    }
+                    if (world->type[i] == WATER) {
+                        world->reaction[i](world, i, player, STEP_ON);
+                    }
+                    if (world->type[i] == TREE) {
+                        world->reaction[i](world, i, player, BUMP);
+                    }
                 }
             }
         }
@@ -81,11 +83,13 @@ void villager_action(World *world, int self) {
 
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (i == self) continue;
-        if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
-            int bx = world->position[i].x;
-            int by = world->position[i].y;
-            if (bx == new_pos.x && by == new_pos.y) {
-                can_move = false;
+        if (world->mask[i] != COMPONENT_NONE) {
+            if ((world->mask[i] & COMPONENT_SOLID) == COMPONENT_SOLID) {
+                int bx = world->position[i].x;
+                int by = world->position[i].y;
+                if (bx == new_pos.x && by == new_pos.y) {
+                    can_move = false;
+                }
             }
         }
     }

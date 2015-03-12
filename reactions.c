@@ -1,11 +1,12 @@
 #include "reactions.h"
 #include "interface.h"
 #include "globals.h"
+#include "tiles.h"
 
 void flower_reaction(World *world, int self, int actor, Action action) {
     if (action == STEP_ON) {
-        world->appearance[self].chr = '"';
-        world->type[self] = FLOWER_CRUSHED;
+        Position pos = world->position[self];
+        create_tile(pos.x, pos.y, FLOWER_CRUSHED, world);
         if (actor == player) {
             interface_write(0, 14, "A flower is crushed beneath your feet.");
             interface_flush();
